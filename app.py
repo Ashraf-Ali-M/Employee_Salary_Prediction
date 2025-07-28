@@ -4,7 +4,6 @@ import pandas as pd
 import joblib
 import numpy as np
 
-# --- 1. Load the trained model (now expecting a Pipeline) ---
 try:
     model = joblib.load("best_model.pkl")
     if not hasattr(model, 'predict'):
@@ -16,12 +15,6 @@ except FileNotFoundError:
 except Exception as e:
     st.error(f"Error loading the model: {e}. Please ensure 'best_model.pkl' is a valid joblib file.")
     st.stop()
-
-# --- 2. Define LabelEncoder Mappings ---
-# These mappings are crucial to convert categorical string inputs back to
-# the numerical format that your model was trained on.
-# They are derived assuming LabelEncoder sorts categories alphabetically.
-# If your LabelEncoder produced different mappings, adjust these.
 
 workclass_mapping = {
     'Federal-gov': 0, 'Local-gov': 1, 'Others': 2, 'Private': 3,
@@ -73,8 +66,6 @@ native_country_options = [
 native_country_mapping = {country: i for i, country in enumerate(native_country_options)}
 default_native_country_encoded = native_country_mapping.get('United-States', 0)
 
-
-# --- 3. Preprocessing Function for Input Data ---
 def preprocess_data(df):
     """
     Applies the same preprocessing steps as done during model training,
@@ -134,17 +125,14 @@ def preprocess_data(df):
     return reordered_df
 
 
-# --- 4. Streamlit App Layout ---
 st.set_page_config(page_title="Employee Salary Classification", page_icon="💼", layout="centered")
 
-st.title("💼 Employee Salary Classification App")
+st.title("Employee Salary Classification App")
 st.markdown("Predict whether an employee earns **>50K** or **≤50K** based on various features.")
 st.markdown("---")
 
-# --- Sidebar for Input Features ---
 st.sidebar.header("Input Employee Details")
 
-# Numerical Inputs
 age = st.sidebar.slider("Age", min_value=17, max_value=75, value=30)
 educational_num = st.sidebar.slider(
     "Educational Number",
@@ -156,11 +144,11 @@ st.sidebar.markdown(
     **Educational Number Mapping:**
     * **5:** 5th-6th grade
     * **7:** 11th grade
-    * **9:** HS-grad (High School Graduate)
+    * **9:** High School Graduate
     * **10:** Some-college
     * **13:** Bachelors
     * **14:** Masters
-    * **16:** Doctorate (PhD)
+    * **16:** PhD
     """
 )
 
@@ -168,7 +156,6 @@ capital_gain = st.sidebar.number_input("Capital Gain (USD)", min_value=0, max_va
 capital_loss = st.sidebar.number_input("Capital Loss (USD)", min_value=0, max_value=4500, value=0, step=10)
 hours_per_week = st.sidebar.slider("Hours per Week", min_value=1, max_value=99, value=40)
 
-# Categorical Inputs (using predefined options and mappings)
 workclass = st.sidebar.selectbox("Workclass", workclass_options, index=workclass_options.index('Private') if 'Private' in workclass_options else 0)
 marital_status = st.sidebar.selectbox("Marital Status", marital_status_options, index=marital_status_options.index('Never-married') if 'Never-married' in marital_status_options else 0)
 occupation = st.sidebar.selectbox("Occupation", occupation_options, index=occupation_options.index('Tech-support') if 'Tech-support' in occupation_options else 0)
@@ -178,8 +165,7 @@ gender = st.sidebar.selectbox("Gender", gender_options, index=gender_options.ind
 native_country = st.sidebar.selectbox("Native Country", native_country_options, index=native_country_options.index('United-States') if 'United-States' in native_country_options else 0)
 
 
-# --- 5. Prepare Single Input DataFrame ---
-TYPICAL_FNLWGT_VALUE = 200000 # Hardcoded typical value for fnlwgt
+TYPICAL_FNLWGT_VALUE = 200000 
 
 input_data_raw = pd.DataFrame({
     'age': [age],
@@ -197,9 +183,8 @@ input_data_raw = pd.DataFrame({
     'native-country': [native_country]
 })
 
-# --- Display Raw Input in a user-friendly way ---
 st.write("### 📝 Your Input Details:")
-col1, col2 = st.columns(2) # Use columns for a cleaner layout
+col1, col2 = st.columns(2)
 
 with col1:
     st.write(f"**Age:** {age}")
@@ -216,17 +201,14 @@ with col2:
     st.write(f"**Capital Loss:** ${capital_loss:,.0f}")
     st.write(f"**Hours per Week:** {hours_per_week}")
     st.write(f"**Native Country:** {native_country}")
-    st.write(f"**Census Weight (fnlwgt):** {TYPICAL_FNLWGT_VALUE}") # Show the hardcoded value
+    #st.write(f"**Census Weight (fnlwgt):** {TYPICAL_FNLWGT_VALUE}")
 
 
-# Preprocess the single input data
 input_data_processed = preprocess_data(input_data_raw)
 
-# Check if processed data is empty (e.g., due to filtering)
 if input_data_processed.empty:
     st.warning("Input data was filtered out due to invalid values after preprocessing. Please adjust inputs.")
 else:
-    # --- 6. Predict Button ---
     if st.button("Predict Salary Class"):
         try:
             predicted_label_string = model.predict(input_data_processed)[0]
@@ -236,7 +218,6 @@ else:
 
             if hasattr(model, 'predict_proba'):
                 probabilities = model.predict_proba(input_data_processed)
-                # Get the actual class labels from the model's final estimator
                 model_classes = model.named_steps['model'].classes_.tolist()
                 proba_output = {model_classes[i]: f"{probabilities[0][i]:.2%}" for i in range(len(model_classes))} # Format as percentage
                 st.info(f"Confidence: {proba_output}")
